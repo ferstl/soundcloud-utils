@@ -1,6 +1,8 @@
 package com.github.ferstl.soundcloud;
 
 import java.net.URI;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.RequestEntity.HeadersBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -29,7 +31,12 @@ public class ScClient {
         .build()
         .toUri();
 
-    return this.restOperations.getForEntity(uri, TrackInfo.class);
+    HeadersBuilder<?> builder = RequestEntity.get(uri);
+    if (this.oAuthToken != null) {
+      builder.header("Authorization", "OAuth " + this.oAuthToken);
+    }
+
+    return this.restOperations.exchange(builder.build(), TrackInfo.class);
   }
 
   private static UriComponentsBuilder apiV2Builder() {
