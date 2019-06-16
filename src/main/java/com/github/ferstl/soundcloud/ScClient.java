@@ -4,6 +4,7 @@ import java.net.URI;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.util.UriComponentsBuilder;
+import com.github.ferstl.soundcloud.model.TrackInfo;
 
 public class ScClient {
 
@@ -20,7 +21,7 @@ public class ScClient {
     this.oAuthToken = oAuthToken;
   }
 
-  public ResponseEntity<String> resolve(String scUrl) {
+  public ResponseEntity<TrackInfo> resolve(String scUrl) {
     URI uri = apiV2Builder()
         .path("/resolve")
         .queryParam("url", scUrl)
@@ -28,7 +29,7 @@ public class ScClient {
         .build()
         .toUri();
 
-    return this.restOperations.getForEntity(uri, String.class);
+    return this.restOperations.getForEntity(uri, TrackInfo.class);
   }
 
   private static UriComponentsBuilder apiV2Builder() {
