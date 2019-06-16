@@ -6,6 +6,7 @@ import org.springframework.http.RequestEntity.HeadersBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.util.UriComponentsBuilder;
+import com.github.ferstl.soundcloud.model.Location;
 import com.github.ferstl.soundcloud.model.TrackInfo;
 
 public class ScClient {
@@ -37,6 +38,19 @@ public class ScClient {
     }
 
     return this.restOperations.exchange(builder.build(), TrackInfo.class);
+  }
+
+  public ResponseEntity<Location> getAssetLocation(String url) {
+    URI requestUri = UriComponentsBuilder.fromHttpUrl(url)
+        .build()
+        .toUri();
+
+    HeadersBuilder<?> builder = RequestEntity.get(requestUri);
+    if (this.oAuthToken != null) {
+      builder.header("Authorization", "OAuth " + this.oAuthToken);
+    }
+
+    return this.restOperations.exchange(builder.build(), Location.class);
   }
 
   private static UriComponentsBuilder apiV2Builder() {

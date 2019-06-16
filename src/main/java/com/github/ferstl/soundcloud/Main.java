@@ -1,5 +1,8 @@
 package com.github.ferstl.soundcloud;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -9,7 +12,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import com.github.ferstl.soundcloud.model.Location;
 import com.github.ferstl.soundcloud.model.TrackInfo;
+import com.github.ferstl.soundcloud.model.Transcoding;
+import static java.util.stream.Collectors.joining;
 
 public class Main {
 
@@ -30,7 +36,45 @@ public class Main {
     ScClient scClient = new ScClient(restTemplate, CLIENT_ID, oAuthToken);
 
     ResponseEntity<TrackInfo> result = scClient.resolve(scUrl);
-    System.out.println(result);
+
+    TrackInfo trackInfo = result.getBody();
+
+    List<Transcoding> progressiveTranscodings = trackInfo.getMedia().getTranscodings().stream()
+        .filter(transcoding -> "progressive".equals(transcoding.getFormat().getProtocol()))
+        .collect(Collectors.toList());
+
+    Transcoding transcoding;
+    if (progressiveTranscodings.size() == 0) {
+      throw new IllegalStateException("No progressive transcoding found");
+    } else if (progressiveTranscodings.size() == 1) {
+      transcoding = progressiveTranscodings.get(0);
+    } else {
+      transcoding = findHighQualityTranscoding(progressiveTranscodings)
+          .orElseThrow(() -> new IllegalStateException("Found more than one standard quality progressive transcoding"));
+    }
+
+    String url = transcoding.getUrl();
+    ResponseEntity<Location> downloadLocation = scClient.getAssetLocation(url);
+
+    System.out.println(downloadLocation.getBody().getUrl());
+  }
+
+  private static Optional<Transcoding> findHighQualityTranscoding(List<Transcoding> progressiveTranscodings) {
+    List<Transcoding> hqTranscodings = progressiveTranscodings.stream()
+        .filter(transcoding -> "hq".equals(transcoding.getQuality()))
+        .collect(Collectors.toList());
+
+    if (hqTranscodings.size() == 0) {
+      return Optional.empty();
+    } else if (hqTranscodings.size() == 1) {
+      return Optional.of(hqTranscodings.get(0));
+    } else {
+      String presets = hqTranscodings.stream()
+          .map(Transcoding::getPreset)
+          .collect(joining(", "));
+      throw new IllegalStateException("Found more than one high quality progressive transcoding: " + presets);
+    }
+
   }
 
   static ObjectMapper createObjectMapper() {
