@@ -1,9 +1,16 @@
 package com.github.ferstl.soundcloud;
 
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.RequestEntity.HeadersBuilder;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RequestCallback;
+import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.util.UriComponentsBuilder;
 import com.github.ferstl.soundcloud.model.Location;
@@ -51,6 +58,30 @@ public class ScClient {
     }
 
     return this.restOperations.exchange(builder.build(), Location.class);
+  }
+
+  public Path download(String downloadUrl, Path destination) {
+    URI downloadUri = UriComponentsBuilder.fromHttpUrl(downloadUrl)
+        .build()
+        .toUri();
+
+
+    RequestCallback requestCallback = request -> {
+    };
+
+    ResponseExtractor<Path> downloader = response -> {
+      Path target;
+      if (Files.isDirectory(destination)) {
+        target = destination.resolve(Paths.get(downloadUri.getPath()).getFileName());
+      } else {
+        target = destination;
+      }
+
+      Files.copy(response.getBody(), target, StandardCopyOption.REPLACE_EXISTING);
+      return target;
+    };
+
+    return this.restOperations.execute(downloadUri, HttpMethod.GET, requestCallback, downloader);
   }
 
   private static UriComponentsBuilder apiV2Builder() {

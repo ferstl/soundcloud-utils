@@ -1,5 +1,7 @@
 package com.github.ferstl.soundcloud;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -9,6 +11,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
@@ -56,7 +59,14 @@ public class Main {
     String url = transcoding.getUrl();
     ResponseEntity<Location> downloadLocation = scClient.getAssetLocation(url);
 
-    System.out.println(downloadLocation.getBody().getUrl());
+    String downloadUrl = downloadLocation.getBody().getUrl();
+    Path destination = Paths.get(".");
+
+    System.out.println("Downloading: " + downloadUrl + " to " + destination.toAbsolutePath());
+
+    Path file = scClient.download(downloadUrl, destination);
+
+    System.out.println("Downloaded to " + file.toAbsolutePath());
   }
 
   private static Optional<Transcoding> findHighQualityTranscoding(List<Transcoding> progressiveTranscodings) {
@@ -82,6 +92,7 @@ public class Main {
         .registerModule(new ParameterNamesModule())
         .registerModule(new Jdk8Module())
         .registerModule(new JavaTimeModule())
+        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 }
